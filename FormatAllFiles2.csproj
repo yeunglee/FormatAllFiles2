@@ -46,6 +46,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="FormatAllFilesOptions.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="FormatAllFiles2Package.cs" />
     <Compile Include="FormatAllFilesCommand.cs" />
   </ItemGroup>

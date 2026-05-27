@@ -26,6 +26,7 @@ namespace FormatAllFiles2
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(FormatAllFiles2Package.PackageGuidString)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
+    [ProvideOptionPage(typeof(FormatAllFilesOptions), "Format All Files", "General", 0, 0, true)]
     public sealed class FormatAllFiles2Package : AsyncPackage
     {
         /// <summary>

@@ -1,7 +1,6 @@
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.ComponentModel.Design;
 using System.IO;
@@ -149,62 +148,12 @@ namespace FormatAllFiles2
             }
         }
 
-        private static bool IsFormatableExtension(string extension)
+        private bool IsFormatableExtension(string extension)
         {
             if (string.IsNullOrEmpty(extension)) return false;
 
-            switch (extension)
-            {
-                case ".cs":
-                case ".vb":
-                case ".cpp":
-                case ".h":
-                case ".c":
-                case ".hpp":
-                case ".cc":
-                case ".cxx":
-                case ".xml":
-                case ".xaml":
-                case ".axml":
-                case ".html":
-                case ".htm":
-                case ".css":
-                case ".js":
-                case ".ts":
-                case ".jsx":
-                case ".tsx":
-                case ".json":
-                case ".sql":
-                case ".cshtml":
-                case ".vbhtml":
-                case ".aspx":
-                case ".ascx":
-                case ".master":
-                case ".config":
-                case ".targets":
-                case ".props":
-                case ".resx":
-                case ".fs":
-                case ".razor":
-                case ".scss":
-                case ".less":
-                case ".svg":
-                case ".ps1":
-                case ".psm1":
-                case ".psd1":
-                case ".bat":
-                case ".cmd":
-                case ".ini":
-                case ".toml":
-                case ".yaml":
-                case ".yml":
-                case ".proto":
-                case ".md":
-                case ".py":
-                    return true;
-                default:
-                    return false;
-            }
+            var options = (FormatAllFilesOptions)package.GetDialogPage(typeof(FormatAllFilesOptions));
+            return options.GetExtensions().Contains(extension);
         }
     }
 }
