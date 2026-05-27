@@ -17,7 +17,10 @@ namespace FormatAllFiles2
             ".ps1; .psm1; .psd1; .bat; .cmd; " +
             ".ini; .toml; .yaml; .yml; .proto; .md; .py";
 
+        private const string DefaultFormatCommand = "Edit.FormatDocument";
+
         private string fileExtensions = DefaultExtensions;
+        private string formatCommand = DefaultFormatCommand;
         private HashSet<string> cachedExtensions;
         private string cachedExtensionsSource;
 
@@ -34,6 +37,16 @@ namespace FormatAllFiles2
                 cachedExtensions = null;
                 cachedExtensionsSource = null;
             }
+        }
+
+        [Category("Format All Files")]
+        [DisplayName("Format Command")]
+        [Description("The Visual Studio command to execute for formatting each file. "
+                   + "Default: Edit.FormatDocument. Other examples: Edit.FormatSelection, Edit.RemoveAndSort")]
+        public string FormatCommand
+        {
+            get => formatCommand;
+            set => formatCommand = value ?? DefaultFormatCommand;
         }
 
         public ISet<string> GetExtensions()
@@ -66,6 +79,7 @@ namespace FormatAllFiles2
         {
             base.ResetSettings();
             FileExtensions = DefaultExtensions;
+            FormatCommand = DefaultFormatCommand;
         }
     }
 }

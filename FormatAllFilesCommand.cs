@@ -129,15 +129,16 @@ namespace FormatAllFiles2
 
                 if (doc != null)
                 {
+                    var formatCommand = GetFormatCommand();
                     doc.Activate();
-                    dte.ExecuteCommand("Edit.FormatDocument");
+                    dte.ExecuteCommand(formatCommand);
                     if (!doc.Saved) doc.Save();
                 }
                 else
                 {
                     var window = projectItem.Open(EnvDTE.Constants.vsViewKindCode);
                     window.Visible = false;
-                    dte.ExecuteCommand("Edit.FormatDocument");
+                    dte.ExecuteCommand(GetFormatCommand());
                     if (!projectItem.Document.Saved) projectItem.Document.Save();
                     window.Close(vsSaveChanges.vsSaveChangesYes);
                 }
@@ -154,6 +155,12 @@ namespace FormatAllFiles2
 
             var options = (FormatAllFilesOptions)package.GetDialogPage(typeof(FormatAllFilesOptions));
             return options.GetExtensions().Contains(extension);
+        }
+
+        private string GetFormatCommand()
+        {
+            var options = (FormatAllFilesOptions)package.GetDialogPage(typeof(FormatAllFilesOptions));
+            return options.FormatCommand;
         }
     }
 }
