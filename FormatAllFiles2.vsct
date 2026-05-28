@@ -5,6 +5,9 @@
   <Extern href="vsshlids.h"/>
 
   <Commands package="guidFormatAllFiles2Package">
+    <Bitmaps>
+      <Bitmap guid="guidImages" href="Resources\icon.png" usedList="1"/>
+    </Bitmaps>
     <Groups>
       <Group guid="guidFormatAllFiles2CmdSet" id="GroupSln" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_SOLNNODE"/>
@@ -46,6 +49,7 @@
 
     <Buttons>
       <Button guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100" type="Button">
+        <Icon guid="guidImages" id="1" />
         <Parent guid="guidFormatAllFiles2CmdSet" id="GroupSln"/>
         <Strings>
           <ButtonText>Format All Files</ButtonText>
@@ -92,6 +96,7 @@
 
   <Symbols>
     <GuidSymbol name="guidFormatAllFiles2Package" value="{ba77e02a-8bae-457d-894d-537e5d11e0b9}" />
+    <GuidSymbol name="guidImages" value="{ec0d7d3d-7a31-4f8a-a15a-7b121762a00a}" />
 
     <GuidSymbol name="guidFormatAllFiles2CmdSet" value="{6d4a8b3e-2c5f-4d7a-9e1b-8f3c5a7d9e2a}">
       <IDSymbol name="GroupSln" value="0x1020" />
