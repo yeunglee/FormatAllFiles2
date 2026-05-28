@@ -4,6 +4,7 @@
         <Identity Id="FormatAllFiles2.678bd4c4-a586-4ec0-81bf-5abbfdcdca6c" Version="1.0" Language="en-US" Publisher="yeunglee" />
         <DisplayName>Format All Files</DisplayName>
         <Description xml:space="preserve">Formats all code files in the selected solution, project, or folder with a single click.</Description>
+        <Icon>Resources/icon.ico</Icon>
     </Metadata>
     <Installation>
         <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, )">
