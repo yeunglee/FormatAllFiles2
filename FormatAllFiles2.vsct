@@ -18,6 +18,30 @@
       <Group guid="guidFormatAllFiles2CmdSet" id="GroupItem" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE"/>
       </Group>
+      <Group guid="guidFormatAllFiles2CmdSet" id="GroupMultiItem" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_MULTIITEM"/>
+      </Group>
+      <Group guid="guidFormatAllFiles2CmdSet" id="GroupMultiProj" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_MULTIPROJ"/>
+      </Group>
+      <Group guid="guidFormatAllFiles2CmdSet" id="GroupSolnFolder" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_SOLNFOLDER"/>
+      </Group>
+      <Group guid="guidFormatAllFiles2CmdSet" id="GroupSlnProj" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_SLNPROJ"/>
+      </Group>
+      <Group guid="guidFormatAllFiles2CmdSet" id="GroupSlnItem" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_SLNITEM"/>
+      </Group>
+      <Group guid="guidFormatAllFiles2CmdSet" id="GroupProjItem" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_PROJITEM"/>
+      </Group>
+      <Group guid="guidFormatAllFiles2CmdSet" id="GroupMultiFolder" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_MULTIFOLDER"/>
+      </Group>
+      <Group guid="guidFormatAllFiles2CmdSet" id="GroupMultiProjFldr" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_MULTIPROJFLDR"/>
+      </Group>
     </Groups>
 
     <Buttons>
@@ -40,6 +64,30 @@
     <CommandPlacement guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100">
       <Parent guid="guidFormatAllFiles2CmdSet" id="GroupItem"/>
     </CommandPlacement>
+    <CommandPlacement guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100">
+      <Parent guid="guidFormatAllFiles2CmdSet" id="GroupMultiItem"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100">
+      <Parent guid="guidFormatAllFiles2CmdSet" id="GroupMultiProj"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100">
+      <Parent guid="guidFormatAllFiles2CmdSet" id="GroupSolnFolder"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100">
+      <Parent guid="guidFormatAllFiles2CmdSet" id="GroupSlnProj"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100">
+      <Parent guid="guidFormatAllFiles2CmdSet" id="GroupSlnItem"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100">
+      <Parent guid="guidFormatAllFiles2CmdSet" id="GroupProjItem"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100">
+      <Parent guid="guidFormatAllFiles2CmdSet" id="GroupMultiFolder"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidFormatAllFiles2CmdSet" id="cmdidFormatAllFiles" priority="0x0100">
+      <Parent guid="guidFormatAllFiles2CmdSet" id="GroupMultiProjFldr"/>
+    </CommandPlacement>
   </CommandPlacements>
 
   <Symbols>
@@ -50,6 +98,14 @@
       <IDSymbol name="GroupProj" value="0x1021" />
       <IDSymbol name="GroupFolder" value="0x1022" />
       <IDSymbol name="GroupItem" value="0x1023" />
+      <IDSymbol name="GroupMultiItem" value="0x1024" />
+      <IDSymbol name="GroupMultiProj" value="0x1025" />
+      <IDSymbol name="GroupSolnFolder" value="0x1026" />
+      <IDSymbol name="GroupSlnProj" value="0x1027" />
+      <IDSymbol name="GroupSlnItem" value="0x1028" />
+      <IDSymbol name="GroupProjItem" value="0x1029" />
+      <IDSymbol name="GroupMultiFolder" value="0x1030" />
+      <IDSymbol name="GroupMultiProjFldr" value="0x1031" />
       <IDSymbol name="cmdidFormatAllFiles" value="0x0100" />
     </GuidSymbol>
   </Symbols>

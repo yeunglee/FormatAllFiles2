@@ -2,6 +2,7 @@ using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.IO;
 
@@ -48,6 +49,9 @@ namespace FormatAllFiles2
             var logger = OutputWindowLogger.Instance;
             logger.Clear();
             logger.LogLine($"Format All Files started at {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+
+            var formatCommands = GetFormatCommands();
+            logger.LogLine($"Format Commands: {string.Join("; ", formatCommands)}");
             logger.LogLine(string.Empty);
 
             int successCount = 0;
@@ -55,7 +59,7 @@ namespace FormatAllFiles2
 
             foreach (UIHierarchyItem item in items)
             {
-                FormatItem(item.Object, dte, logger, ref successCount, ref failCount);
+                FormatItem(item.Object, dte, formatCommands, logger, ref successCount, ref failCount);
             }
 
             logger.LogLine(string.Empty);
@@ -65,7 +69,7 @@ namespace FormatAllFiles2
             logger.Activate();
         }
 
-        private void FormatItem(object item, DTE2 dte, OutputWindowLogger logger, ref int successCount, ref int failCount)
+        private void FormatItem(object item, DTE2 dte, IList<string> formatCommands, OutputWindowLogger logger, ref int successCount, ref int failCount)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -73,21 +77,21 @@ namespace FormatAllFiles2
             {
                 foreach (Project project in solution.Projects)
                 {
-                    FormatProjectItems(project.ProjectItems, dte, project.Name, logger, ref successCount, ref failCount);
+                    FormatProjectItems(project.ProjectItems, dte, formatCommands, project.Name, logger, ref successCount, ref failCount);
                 }
             }
             else if (item is Project project)
             {
-                FormatProjectItems(project.ProjectItems, dte, project.Name, logger, ref successCount, ref failCount);
+                FormatProjectItems(project.ProjectItems, dte, formatCommands, project.Name, logger, ref successCount, ref failCount);
             }
             else if (item is ProjectItem projectItem)
             {
                 var projectName = projectItem.ContainingProject?.Name ?? "(Solution)";
-                FormatProjectItem(projectItem, dte, projectName, logger, ref successCount, ref failCount);
+                FormatProjectItem(projectItem, dte, formatCommands, projectName, logger, ref successCount, ref failCount);
             }
         }
 
-        private void FormatProjectItems(ProjectItems projectItems, DTE2 dte, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
+        private void FormatProjectItems(ProjectItems projectItems, DTE2 dte, IList<string> formatCommands, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -95,21 +99,25 @@ namespace FormatAllFiles2
 
             foreach (ProjectItem item in projectItems)
             {
-                FormatProjectItem(item, dte, projectName, logger, ref successCount, ref failCount);
+                FormatProjectItem(item, dte, formatCommands, projectName, logger, ref successCount, ref failCount);
             }
         }
 
-        private void FormatProjectItem(ProjectItem projectItem, DTE2 dte, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
+        private void FormatProjectItem(ProjectItem projectItem, DTE2 dte, IList<string> formatCommands, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            if (projectItem.ProjectItems != null && projectItem.ProjectItems.Count > 0)
+            if (projectItem.SubProject != null)
             {
-                FormatProjectItems(projectItem.ProjectItems, dte, projectName, logger, ref successCount, ref failCount);
+                FormatProjectItems(projectItem.SubProject.ProjectItems, dte, formatCommands, projectItem.SubProject.Name, logger, ref successCount, ref failCount);
+            }
+            else if (projectItem.ProjectItems != null && projectItem.ProjectItems.Count > 0)
+            {
+                FormatProjectItems(projectItem.ProjectItems, dte, formatCommands, projectName, logger, ref successCount, ref failCount);
             }
             else if (IsPhysicalFile(projectItem))
             {
-                FormatFile(projectItem, dte, projectName, logger, ref successCount, ref failCount);
+                FormatFile(projectItem, dte, formatCommands, projectName, logger, ref successCount, ref failCount);
             }
         }
 
@@ -122,7 +130,7 @@ namespace FormatAllFiles2
                 StringComparison.OrdinalIgnoreCase);
         }
 
-        private void FormatFile(ProjectItem projectItem, DTE2 dte, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
+        private void FormatFile(ProjectItem projectItem, DTE2 dte, IList<string> formatCommands, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -148,9 +156,9 @@ namespace FormatAllFiles2
 
                 if (doc != null)
                 {
-                    var formatCommand = GetFormatCommand();
                     doc.Activate();
-                    dte.ExecuteCommand(formatCommand);
+                    foreach (var cmd in formatCommands)
+                        dte.ExecuteCommand(cmd);
                     if (!doc.Saved) doc.Save();
                 }
                 else
@@ -158,7 +166,8 @@ namespace FormatAllFiles2
                     var window = projectItem.Open(EnvDTE.Constants.vsViewKindCode);
                     window.Visible = false;
                     projectItem.Document.Activate();
-                    dte.ExecuteCommand(GetFormatCommand());
+                    foreach (var cmd in formatCommands)
+                        dte.ExecuteCommand(cmd);
                     if (!projectItem.Document.Saved) projectItem.Document.Save();
                     window.Close(vsSaveChanges.vsSaveChangesYes);
                 }
@@ -209,10 +218,10 @@ namespace FormatAllFiles2
             return options.GetExtensions().Contains(extension);
         }
 
-        private string GetFormatCommand()
+        private IList<string> GetFormatCommands()
         {
             var options = (FormatAllFilesOptions)package.GetDialogPage(typeof(FormatAllFilesOptions));
-            return options.FormatCommand;
+            return options.GetCommands();
         }
     }
 }

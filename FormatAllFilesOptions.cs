@@ -17,12 +17,14 @@ namespace FormatAllFiles2
             ".ps1; .psm1; .psd1; .bat; .cmd; " +
             ".ini; .toml; .yaml; .yml; .proto; .md; .py";
 
-        private const string DefaultFormatCommand = "Edit.FormatDocument";
+        private const string DefaultFormatCommands = "Edit.FormatDocument";
 
         private string fileExtensions = DefaultExtensions;
-        private string formatCommand = DefaultFormatCommand;
+        private string formatCommands = DefaultFormatCommands;
         private HashSet<string> cachedExtensions;
         private string cachedExtensionsSource;
+        private List<string> cachedCommands;
+        private string cachedCommandsSource;
 
         [Category("Format All Files")]
         [DisplayName("File Extensions")]
@@ -40,13 +42,18 @@ namespace FormatAllFiles2
         }
 
         [Category("Format All Files")]
-        [DisplayName("Format Command")]
-        [Description("The Visual Studio command to execute for formatting each file. "
-                   + "Default: Edit.FormatDocument. Other examples: Edit.FormatSelection, Edit.RemoveAndSort")]
-        public string FormatCommand
+        [DisplayName("Format Commands")]
+        [Description("Semicolon-separated list of Visual Studio commands to execute for formatting each file. "
+                   + "Default: Edit.FormatDocument. Example: Edit.FormatDocument; Edit.RemoveAndSort")]
+        public string FormatCommands
         {
-            get => formatCommand;
-            set => formatCommand = value ?? DefaultFormatCommand;
+            get => formatCommands;
+            set
+            {
+                formatCommands = value;
+                cachedCommands = null;
+                cachedCommandsSource = null;
+            }
         }
 
         public ISet<string> GetExtensions()
@@ -75,11 +82,36 @@ namespace FormatAllFiles2
             return set;
         }
 
+        public IList<string> GetCommands()
+        {
+            var current = FormatCommands;
+            if (cachedCommands != null && cachedCommandsSource == current)
+                return cachedCommands;
+
+            var list = new List<string>();
+            if (!string.IsNullOrWhiteSpace(current))
+            {
+                foreach (var part in current.Split(';'))
+                {
+                    var cmd = part.Trim();
+                    if (cmd.Length > 0)
+                        list.Add(cmd);
+                }
+            }
+
+            if (list.Count == 0)
+                list.Add("Edit.FormatDocument");
+
+            cachedCommands = list;
+            cachedCommandsSource = current;
+            return list;
+        }
+
         public override void ResetSettings()
         {
             base.ResetSettings();
             FileExtensions = DefaultExtensions;
-            FormatCommand = DefaultFormatCommand;
+            FormatCommands = DefaultFormatCommands;
         }
     }
 }
