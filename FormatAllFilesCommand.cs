@@ -31,6 +31,7 @@ namespace FormatAllFiles2
 
             var commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
             Instance = new FormatAllFilesCommand(package, commandService);
+            OutputWindowLogger.Initialize();
         }
 
         private void Execute(object sender, EventArgs e)
@@ -44,13 +45,27 @@ namespace FormatAllFiles2
             var items = solutionExplorer.SelectedItems as object[];
             if (items == null || items.Length == 0) return;
 
+            var logger = OutputWindowLogger.Instance;
+            logger.Clear();
+            logger.LogLine($"Format All Files started at {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            logger.LogLine(string.Empty);
+
+            int successCount = 0;
+            int failCount = 0;
+
             foreach (UIHierarchyItem item in items)
             {
-                FormatItem(item.Object, dte);
+                FormatItem(item.Object, dte, logger, ref successCount, ref failCount);
             }
+
+            logger.LogLine(string.Empty);
+            logger.LogLine($"Format All Files ended at {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            logger.LogLine($"  Succeeded: {successCount}");
+            logger.LogLine($"  Failed:    {failCount}");
+            logger.Activate();
         }
 
-        private void FormatItem(object item, DTE2 dte)
+        private void FormatItem(object item, DTE2 dte, OutputWindowLogger logger, ref int successCount, ref int failCount)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -58,20 +73,21 @@ namespace FormatAllFiles2
             {
                 foreach (Project project in solution.Projects)
                 {
-                    FormatProjectItems(project.ProjectItems, dte);
+                    FormatProjectItems(project.ProjectItems, dte, project.Name, logger, ref successCount, ref failCount);
                 }
             }
             else if (item is Project project)
             {
-                FormatProjectItems(project.ProjectItems, dte);
+                FormatProjectItems(project.ProjectItems, dte, project.Name, logger, ref successCount, ref failCount);
             }
             else if (item is ProjectItem projectItem)
             {
-                FormatProjectItem(projectItem, dte);
+                var projectName = projectItem.ContainingProject?.Name ?? "(Solution)";
+                FormatProjectItem(projectItem, dte, projectName, logger, ref successCount, ref failCount);
             }
         }
 
-        private void FormatProjectItems(ProjectItems projectItems, DTE2 dte)
+        private void FormatProjectItems(ProjectItems projectItems, DTE2 dte, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -79,21 +95,21 @@ namespace FormatAllFiles2
 
             foreach (ProjectItem item in projectItems)
             {
-                FormatProjectItem(item, dte);
+                FormatProjectItem(item, dte, projectName, logger, ref successCount, ref failCount);
             }
         }
 
-        private void FormatProjectItem(ProjectItem projectItem, DTE2 dte)
+        private void FormatProjectItem(ProjectItem projectItem, DTE2 dte, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
             if (projectItem.ProjectItems != null && projectItem.ProjectItems.Count > 0)
             {
-                FormatProjectItems(projectItem.ProjectItems, dte);
+                FormatProjectItems(projectItem.ProjectItems, dte, projectName, logger, ref successCount, ref failCount);
             }
             else if (IsPhysicalFile(projectItem))
             {
-                FormatFile(projectItem, dte);
+                FormatFile(projectItem, dte, projectName, logger, ref successCount, ref failCount);
             }
         }
 
@@ -106,7 +122,7 @@ namespace FormatAllFiles2
                 StringComparison.OrdinalIgnoreCase);
         }
 
-        private void FormatFile(ProjectItem projectItem, DTE2 dte)
+        private void FormatFile(ProjectItem projectItem, DTE2 dte, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -114,6 +130,9 @@ namespace FormatAllFiles2
             var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
 
             if (!IsFormatableExtension(extension)) return;
+
+            var relativePath = GetRelativePath(projectItem, filePath);
+            var prefix = $"[{projectName}]{relativePath}: ";
 
             try
             {
@@ -138,15 +157,48 @@ namespace FormatAllFiles2
                 {
                     var window = projectItem.Open(EnvDTE.Constants.vsViewKindCode);
                     window.Visible = false;
+                    projectItem.Document.Activate();
                     dte.ExecuteCommand(GetFormatCommand());
                     if (!projectItem.Document.Saved) projectItem.Document.Save();
                     window.Close(vsSaveChanges.vsSaveChangesYes);
                 }
+
+                logger.LogLine(prefix + "Success");
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                logger.LogLine(prefix + $"Failed - {ex.GetType().Name}: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    logger.LogLine($"    Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
+                }
+                failCount++;
+            }
+        }
+
+        private static string GetRelativePath(ProjectItem projectItem, string filePath)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var project = projectItem.ContainingProject;
+            if (project == null) return filePath;
+
+            try
+            {
+                var projectDir = Path.GetDirectoryName(project.FullName);
+                if (projectDir != null && filePath.StartsWith(projectDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    var relative = filePath.Substring(projectDir.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    return relative;
+                }
             }
             catch
             {
-                // Skip files that can't be formatted
+                // Fall through to returning the file path
             }
+
+            return filePath;
         }
 
         private bool IsFormatableExtension(string extension)

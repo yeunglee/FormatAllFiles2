@@ -53,6 +53,7 @@
     </Compile>
     <Compile Include="FormatAllFiles2Package.cs" />
     <Compile Include="FormatAllFilesCommand.cs" />
+    <Compile Include="OutputWindowLogger.cs" />
   </ItemGroup>
   <ItemGroup>
     <VSCTCompile Include="FormatAllFiles2.vsct">
