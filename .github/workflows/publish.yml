@@ -1,0 +1,92 @@
+name: Build and Publish to VS Marketplace
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.1)'
+        required: true
+        default: ''
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          # Use workflow input if provided, otherwise derive from git tag
+          $inputVersion = '${{ github.event.inputs.version }}'
+          if ($inputVersion) {
+            $v = $inputVersion
+          } else {
+            $v = '${{ github.ref_name }}' -replace '^v', ''
+          }
+          if (-not $v) {
+            Write-Error "No version found. Push a tag like 'v1.0' or trigger manually with a version."
+            exit 1
+          }
+          Write-Host "Publishing version: $v"
+          echo "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Update version in manifest
+        shell: pwsh
+        run: |
+          $v = '${{ steps.version.outputs.version }}'
+          $manifestPath = 'source.extension.vsixmanifest'
+          [xml]$xml = Get-Content $manifestPath
+          $ns = New-Object Xml.XmlNamespaceManager($xml.NameTable)
+          $ns.AddNamespace('ns', 'http://schemas.microsoft.com/developer/vsx-schema/2011')
+          $identity = $xml.SelectSingleNode('//ns:Identity', $ns)
+          $oldVersion = $identity.Version
+          $identity.Version = $v
+          $xml.Save($manifestPath)
+          Write-Host "Version updated: $oldVersion -> $v"
+
+      - name: Restore NuGet packages
+        run: msbuild FormatAllFiles2.slnx /t:Restore /p:Configuration=Release
+
+      - name: Build VSIX
+        run: msbuild FormatAllFiles2.slnx /p:Configuration=Release /p:Platform="Any CPU"
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FormatAllFiles2.vsix
+          path: bin/Release/*.vsix
+          if-no-files-found: error
+
+      - name: Publish to Visual Studio Marketplace
+        shell: pwsh
+        env:
+          VS_MARKETPLACE_PAT: ${{ secrets.VS_MARKETPLACE_PAT }}
+        run: |
+          $vsix = Get-ChildItem -Path 'bin/Release' -Filter '*.vsix' | Select-Object -First 1
+          if (-not $vsix) {
+            Write-Error "VSIX file not found in bin/Release"
+            exit 1
+          }
+
+          Write-Host "Publishing: $($vsix.Name) ($([math]::Round($vsix.Length / 1KB, 1)) KB)"
+
+          $pat = $env:VS_MARKETPLACE_PAT
+          $base64Auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
+
+          Invoke-RestMethod `
+            -Uri 'https://marketplace.visualstudio.com/_apis/gallery/publishers/yeunglee/extensions/FormatAllFiles2/versions' `
+            -Method Post `
+            -Headers @{Authorization = "Basic $base64Auth"} `
+            -InFile $vsix.FullName `
+            -ContentType 'application/octet-stream'
+
+          Write-Host "Done! Published version ${{ steps.version.outputs.version }} to the Visual Studio Marketplace."

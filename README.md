@@ -62,4 +62,4 @@ The original [FormatAllFiles](https://github.com/munyabe/FormatAllFiles) is no l
 
 ## License
 
-This project inherits the spirit of the original — consider it MIT-or-equivalent. See the [original repository](https://github.com/munyabe/FormatAllFiles) for reference.
+This project is released under the [MIT License](LICENSE). See the [LICENSE](LICENSE) file for the full text.
