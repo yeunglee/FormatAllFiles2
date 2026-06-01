@@ -28,7 +28,11 @@ Open **Tools → Options → Format All Files → General** to customize:
 
 ## Installation
 
-Build the solution in Visual Studio to produce a `.vsix` package, then double-click it to install. The extension will appear under **Tools → Extensions and Updates** as *Format All Files*.
+Install directly from the Visual Studio Marketplace:
+
+**[Format All Files on Marketplace](https://marketplace.visualstudio.com/items?itemName=yeunglee.FormatAllFiles2)**
+
+Or build from source — open the solution in Visual Studio and compile to produce a `.vsix` package, then double-click it to install. The extension will appear under **Tools → Extensions and Updates** as *Format All Files*.
 
 ```bash
 # Build from the command line
