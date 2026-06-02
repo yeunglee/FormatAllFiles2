@@ -1,0 +1,62 @@
+<UserControl x:Class="FormatAllFiles2.OptionsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="260" d:DesignWidth="460">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- File Extensions -->
+            <Label Grid.Row="0" Content="File Extensions" FontWeight="SemiBold" Padding="0,8,0,4"/>
+            <TextBox Grid.Row="1" x:Name="FileExtensionsTextBox"
+                     TextChanged="FileExtensionsTextBox_TextChanged"
+                     Height="Auto" Padding="4" VerticalContentAlignment="Center"/>
+            <TextBlock Grid.Row="2"
+                       Text="Semicolon-separated list of file extensions to format (include the dot). Example: .cs; .vb; .xml"
+                       Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                       FontSize="11" Padding="0,2,0,12" TextWrapping="Wrap"/>
+
+            <!-- Format Command Preset (dropdown) -->
+            <Label Grid.Row="3" Content="Format Command" FontWeight="SemiBold" Padding="0,8,0,4"/>
+            <ComboBox Grid.Row="4" x:Name="FormatCommandComboBox"
+                      SelectionChanged="FormatCommandComboBox_SelectionChanged"
+                      Height="Auto" Padding="4" VerticalContentAlignment="Center">
+                <ComboBoxItem Content="Format Document" Tag="FormatDocument"/>
+                <ComboBoxItem Content="Remove And Sort Usings" Tag="RemoveAndSortUsings"/>
+                <ComboBoxItem Content="Format Document then Remove And Sort Usings" Tag="FormatDocumentThenRemoveAndSortUsings"/>
+                <ComboBoxItem Content="Custom" Tag="Custom"/>
+            </ComboBox>
+            <TextBlock Grid.Row="5"
+                       Text="Predefined format command to execute on each matching file."
+                       Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                       FontSize="11" Padding="0,2,0,12" TextWrapping="Wrap"/>
+
+            <!-- Custom Format Commands (visible only when Custom is selected) -->
+            <Label Grid.Row="6" x:Name="CustomCommandsLabel" Content="Custom Format Commands"
+                   FontWeight="SemiBold" Padding="0,8,0,4"
+                   Visibility="Collapsed"/>
+            <TextBox Grid.Row="7" x:Name="CustomFormatCommandsTextBox"
+                     TextChanged="CustomFormatCommandsTextBox_TextChanged"
+                     Height="Auto" Padding="4" VerticalContentAlignment="Center"
+                     Visibility="Collapsed"/>
+            <TextBlock Grid.Row="8" x:Name="CustomCommandsHint"
+                       Text="Semicolon-separated list of Visual Studio commands to execute for formatting each file. Example: Edit.FormatDocument; Edit.RemoveAndSort"
+                       Foreground="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"
+                       FontSize="11" Padding="0,2,0,12" TextWrapping="Wrap"
+                       Visibility="Collapsed"/>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

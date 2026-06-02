@@ -48,8 +48,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="FormatCommandPreset.cs" />
     <Compile Include="FormatAllFilesOptions.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="OptionsControl.xaml.cs">
+      <DependentUpon>OptionsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="FormatAllFiles2Package.cs" />
     <Compile Include="FormatAllFilesCommand.cs" />
@@ -59,6 +63,12 @@
     <VSCTCompile Include="FormatAllFiles2.vsct">
       <ResourceName>Menus.ctmenu</ResourceName>
     </VSCTCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="OptionsControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <None Include="source.extension.vsixmanifest">
@@ -74,6 +84,10 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Design" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.0.32112.339" ExcludeAssets="runtime" NoWarn="NU1604" />
