@@ -1,6 +1,6 @@
 {
     "$schema": "http://json.schemastore.org/vsix-publish",
-    "categories": ["coding", "formatting"],
+    "categories": ["coding", "documentation"],
     "identity": {
         "internalName": "FormatAllFiles2"
     },
@@ -8,6 +8,6 @@
     "priceCategory": "free",
     "publisher": "yeunglee",
     "private": false,
-    "qna": true,
+    "qna": false,
     "repo": "https://github.com/yeunglee/FormatAllFiles2"
 }
