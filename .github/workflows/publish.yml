@@ -67,26 +67,8 @@ jobs:
           if-no-files-found: error
 
       - name: Publish to Visual Studio Marketplace
-        shell: pwsh
-        env:
-          VS_MARKETPLACE_PAT: ${{ secrets.VS_MARKETPLACE_PAT }}
-        run: |
-          $vsix = Get-ChildItem -Path 'bin/Release' -Filter '*.vsix' | Select-Object -First 1
-          if (-not $vsix) {
-            Write-Error "VSIX file not found in bin/Release"
-            exit 1
-          }
-
-          Write-Host "Publishing: $($vsix.Name) ($([math]::Round($vsix.Length / 1KB, 1)) KB)"
-
-          $pat = $env:VS_MARKETPLACE_PAT
-          $base64Auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
-
-          Invoke-RestMethod `
-            -Uri 'https://marketplace.visualstudio.com/_apis/gallery/publishers/yeunglee/extensions/FormatAllFiles2/versions' `
-            -Method Post `
-            -Headers @{Authorization = "Basic $base64Auth"} `
-            -InFile $vsix.FullName `
-            -ContentType 'application/octet-stream'
-
-          Write-Host "Done! Published version ${{ steps.version.outputs.version }} to the Visual Studio Marketplace."
+        uses: cezarypiatek/VsixPublisherAction@1.2
+        with:
+          extension-file: bin/Release/FormatAllFiles2.vsix
+          publish-manifest-file: publishManifest.json
+          personal-access-code: ${{ secrets.VS_MARKETPLACE_PAT }}
