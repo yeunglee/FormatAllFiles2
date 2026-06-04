@@ -35,9 +35,11 @@ namespace FormatAllFiles2
             OutputWindowLogger.Initialize();
         }
 
-        private void Execute(object sender, EventArgs e)
+#pragma warning disable VSTHRD100 // async void is required for MenuCommand event handler
+        private async void Execute(object sender, EventArgs e)
+#pragma warning restore VSTHRD100
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
             if (dte == null) return;
@@ -46,30 +48,124 @@ namespace FormatAllFiles2
             var items = solutionExplorer.SelectedItems as object[];
             if (items == null || items.Length == 0) return;
 
-            var logger = OutputWindowLogger.Instance;
-            logger.Clear();
-            logger.LogLine($"Format All Files started at {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-
             var formatCommands = GetFormatCommands();
-            logger.LogLine($"Format Commands: {string.Join("; ", formatCommands)}");
-            logger.LogLine(string.Empty);
+
+            // ── Phase 1: Collect all formatable files ──
+            var files = CollectFiles(items, dte);
+
+            if (files.Count == 0)
+            {
+                var logger = OutputWindowLogger.Instance;
+                logger.Clear();
+                logger.LogLine("No formatable files found in the selection.");
+                logger.Activate();
+                return;
+            }
+
+            var logger2 = OutputWindowLogger.Instance;
+            logger2.Clear();
+            logger2.LogLine($"Format All Files started at {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            logger2.LogLine($"Format Commands: {string.Join("; ", formatCommands)}");
+            logger2.LogLine($"Files to format: {files.Count}");
+            logger2.LogLine(string.Empty);
 
             int successCount = 0;
             int failCount = 0;
+            int total = files.Count;
 
-            foreach (UIHierarchyItem item in items)
+            // ── Phase 2: Process files with a custom WPF modal progress dialog ──
+
+            var progressDialog = new ProgressDialog("Format All Files", total);
+
+            // Set the owner to the VS main window so the dialog is properly modal.
+            if (System.Windows.Application.Current?.MainWindow != null)
             {
-                FormatItem(item.Object, dte, formatCommands, logger, ref successCount, ref failCount);
+                progressDialog.Owner = System.Windows.Application.Current.MainWindow;
             }
 
-            logger.LogLine(string.Empty);
-            logger.LogLine($"Format All Files ended at {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-            logger.LogLine($"  Succeeded: {successCount}");
-            logger.LogLine($"  Failed:    {failCount}");
-            logger.Activate();
+            // Start background work once the dialog is loaded and its Dispatcher is pumping.
+            progressDialog.Loaded += (sender2, args2) =>
+            {
+#pragma warning disable VSTHRD110 // Intentional fire-and-forget: task runs while dialog blocks UI thread
+                System.Threading.Tasks.Task.Run(() =>
+#pragma warning restore VSTHRD110
+                {
+                    for (int i = 0; i < files.Count; i++)
+                    {
+                        var file = files[i];
+                        var fileName = Path.GetFileName(file.FilePath);
+
+                        // Update the progress dialog from the background thread
+                        // via the dialog's Dispatcher (runs on the UI thread).
+                        progressDialog.Dispatcher.Invoke(() =>
+                        {
+                            progressDialog.UpdateProgress(
+                                current: i,
+                                total: total,
+                                message: $"Formatting files... ({i + 1}/{total})",
+                                detail: $"[{file.ProjectName}] {file.RelativePath}"
+                            );
+                        });
+
+                        // Execute DTE formatting on the UI thread via Dispatcher.
+                        // ShowDialog() pumps messages, so Dispatcher.Invoke can marshal
+                        // the call to the UI thread even though it is "blocked".
+                        bool fileSuccess = false;
+                        progressDialog.Dispatcher.Invoke(() =>
+                        {
+                            fileSuccess = FormatFile(file, dte, formatCommands, logger2);
+                        });
+
+                        if (fileSuccess)
+                            successCount++;
+                        else
+                            failCount++;
+                    }
+
+                    // Close the dialog once all files are processed.
+                    progressDialog.Dispatcher.Invoke(() => progressDialog.CloseDialog());
+                });
+            };
+
+            // ShowDialog blocks the UI thread but runs a nested message pump.
+            // This allows Dispatcher.Invoke calls from the background thread to
+            // execute on the UI thread while the dialog remains modal (blocking
+            // all other VS operations). The user cannot close the dialog — it
+            // closes automatically when all files have been processed.
+            progressDialog.ShowDialog();
+
+            logger2.LogLine(string.Empty);
+            logger2.LogLine($"Format All Files ended at {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            logger2.LogLine($"  Succeeded: {successCount}");
+            logger2.LogLine($"  Failed:    {failCount}");
+            logger2.Activate();
         }
 
-        private void FormatItem(object item, DTE2 dte, IList<string> formatCommands, OutputWindowLogger logger, ref int successCount, ref int failCount)
+        // ──────────────────────────────────────────
+        //  File collection (two-pass: collect → format)
+        // ──────────────────────────────────────────
+
+        private class FormatFileEntry
+        {
+            public ProjectItem ProjectItem { get; set; }
+            public string ProjectName { get; set; }
+            public string RelativePath { get; set; }
+            public string FilePath { get; set; }
+        }
+
+        private List<FormatFileEntry> CollectFiles(object[] items, DTE2 dte)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var result = new List<FormatFileEntry>();
+            foreach (UIHierarchyItem item in items)
+            {
+                CollectFilesFromItem(item.Object, dte, result);
+            }
+            return result;
+        }
+
+        private void CollectFilesFromItem(object item, DTE2 dte, List<FormatFileEntry> result)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -77,21 +173,21 @@ namespace FormatAllFiles2
             {
                 foreach (Project project in solution.Projects)
                 {
-                    FormatProjectItems(project.ProjectItems, dte, formatCommands, project.Name, logger, ref successCount, ref failCount);
+                    CollectFilesFromProjectItems(project.ProjectItems, project.Name, result);
                 }
             }
             else if (item is Project project)
             {
-                FormatProjectItems(project.ProjectItems, dte, formatCommands, project.Name, logger, ref successCount, ref failCount);
+                CollectFilesFromProjectItems(project.ProjectItems, project.Name, result);
             }
             else if (item is ProjectItem projectItem)
             {
                 var projectName = projectItem.ContainingProject?.Name ?? "(Solution)";
-                FormatProjectItem(projectItem, dte, formatCommands, projectName, logger, ref successCount, ref failCount);
+                CollectFilesFromProjectItem(projectItem, projectName, result);
             }
         }
 
-        private void FormatProjectItems(ProjectItems projectItems, DTE2 dte, IList<string> formatCommands, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
+        private void CollectFilesFromProjectItems(ProjectItems projectItems, string projectName, List<FormatFileEntry> result)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -99,55 +195,61 @@ namespace FormatAllFiles2
 
             foreach (ProjectItem item in projectItems)
             {
-                FormatProjectItem(item, dte, formatCommands, projectName, logger, ref successCount, ref failCount);
+                CollectFilesFromProjectItem(item, projectName, result);
             }
         }
 
-        private void FormatProjectItem(ProjectItem projectItem, DTE2 dte, IList<string> formatCommands, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
+        private void CollectFilesFromProjectItem(ProjectItem projectItem, string projectName, List<FormatFileEntry> result)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
             if (projectItem.SubProject != null)
             {
-                FormatProjectItems(projectItem.SubProject.ProjectItems, dte, formatCommands, projectItem.SubProject.Name, logger, ref successCount, ref failCount);
+                CollectFilesFromProjectItems(projectItem.SubProject.ProjectItems, projectItem.SubProject.Name, result);
             }
             else if (projectItem.ProjectItems != null && projectItem.ProjectItems.Count > 0)
             {
-                FormatProjectItems(projectItem.ProjectItems, dte, formatCommands, projectName, logger, ref successCount, ref failCount);
+                CollectFilesFromProjectItems(projectItem.ProjectItems, projectName, result);
             }
             else if (IsPhysicalFile(projectItem))
             {
-                FormatFile(projectItem, dte, formatCommands, projectName, logger, ref successCount, ref failCount);
+                var filePath = projectItem.FileNames[0];
+                var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
+
+                if (IsFormatableExtension(extension))
+                {
+                    var relativePath = GetRelativePath(projectItem, filePath);
+                    result.Add(new FormatFileEntry
+                    {
+                        ProjectItem = projectItem,
+                        ProjectName = projectName,
+                        RelativePath = relativePath,
+                        FilePath = filePath
+                    });
+                }
             }
         }
 
-        private static bool IsPhysicalFile(ProjectItem projectItem)
+        // ──────────────────────────────────────────
+        //  Single-file formatting
+        // ──────────────────────────────────────────
+
+        /// <summary>
+        /// Format a single file. Returns true on success, false on failure.
+        /// Must be called on the UI thread.
+        /// </summary>
+        private bool FormatFile(FormatFileEntry entry, DTE2 dte, IList<string> formatCommands, OutputWindowLogger logger)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            return string.Equals(
-                projectItem.Kind,
-                EnvDTE.Constants.vsProjectItemKindPhysicalFile,
-                StringComparison.OrdinalIgnoreCase);
-        }
 
-        private void FormatFile(ProjectItem projectItem, DTE2 dte, IList<string> formatCommands, string projectName, OutputWindowLogger logger, ref int successCount, ref int failCount)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            var filePath = projectItem.FileNames[0];
-            var extension = Path.GetExtension(filePath)?.ToLowerInvariant();
-
-            if (!IsFormatableExtension(extension)) return;
-
-            var relativePath = GetRelativePath(projectItem, filePath);
-            var prefix = $"[{projectName}]{relativePath}: ";
+            var prefix = $"[{entry.ProjectName}]{entry.RelativePath}: ";
 
             try
             {
                 Document doc = null;
                 try
                 {
-                    doc = dte.Documents.Item(filePath);
+                    doc = dte.Documents.Item(entry.FilePath);
                 }
                 catch
                 {
@@ -163,17 +265,17 @@ namespace FormatAllFiles2
                 }
                 else
                 {
-                    var window = projectItem.Open(EnvDTE.Constants.vsViewKindCode);
+                    var window = entry.ProjectItem.Open(EnvDTE.Constants.vsViewKindCode);
                     window.Visible = false;
-                    projectItem.Document.Activate();
+                    entry.ProjectItem.Document.Activate();
                     foreach (var cmd in formatCommands)
                         dte.ExecuteCommand(cmd);
-                    if (!projectItem.Document.Saved) projectItem.Document.Save();
+                    if (!entry.ProjectItem.Document.Saved) entry.ProjectItem.Document.Save();
                     window.Close(vsSaveChanges.vsSaveChangesYes);
                 }
 
                 logger.LogLine(prefix + "Success");
-                successCount++;
+                return true;
             }
             catch (Exception ex)
             {
@@ -182,9 +284,13 @@ namespace FormatAllFiles2
                 {
                     logger.LogLine($"    Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
                 }
-                failCount++;
+                return false;
             }
         }
+
+        // ──────────────────────────────────────────
+        //  Helpers
+        // ──────────────────────────────────────────
 
         private static string GetRelativePath(ProjectItem projectItem, string filePath)
         {
@@ -208,6 +314,15 @@ namespace FormatAllFiles2
             }
 
             return filePath;
+        }
+
+        private static bool IsPhysicalFile(ProjectItem projectItem)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            return string.Equals(
+                projectItem.Kind,
+                EnvDTE.Constants.vsProjectItemKindPhysicalFile,
+                StringComparison.OrdinalIgnoreCase);
         }
 
         private bool IsFormatableExtension(string extension)

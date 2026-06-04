@@ -58,6 +58,9 @@
     <Compile Include="FormatAllFiles2Package.cs" />
     <Compile Include="FormatAllFilesCommand.cs" />
     <Compile Include="OutputWindowLogger.cs" />
+    <Compile Include="ProgressDialog.xaml.cs">
+      <DependentUpon>ProgressDialog.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <VSCTCompile Include="FormatAllFiles2.vsct">
@@ -66,6 +69,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="OptionsControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="ProgressDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
